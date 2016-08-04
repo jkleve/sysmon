@@ -69,17 +69,33 @@ def get_cpu ():
     cpu['num_procs'] = psutil.cpu_count()
     cpu['usage'] = psutil.cpu_percent(interval=None, percpu=True)
 
+    cpu['freq'] = []
+    with open('/proc/cpuinfo', 'r') as f:
+        for line in f:
+            if 'cpu MHz' in line:
+                cpu['freq'].append(re.findall("\d+\.\d+", line)[0])
+
     return cpu
 
 def display_cpu ( screen, cpu ):
 
     procs = cpu['num_procs']
     usage = cpu['usage']
+    freq = cpu['freq']
 
     screen.addstr(10, 2, 'CPU')
 
     for i in range(procs):
-        screen.addstr(11+i, 3, 'cpu[%d]: %4.1f' % (i, usage[i]))
+        screen.addstr(11+i, 3, 'cpu[%d]: %4.1f%% %6.1f GHz' % (i, usage[i], float(freq[i])/1000))
+
+def get_memory ():
+
+    v_mem = psutil.virtual_memory()
+
+    memory = {}
+    memory['v_total'] = v_mem['total']
+
+    return memory
 
 def run_cycle ( screen ):
 
@@ -110,16 +126,6 @@ def run_cycle ( screen ):
 
     return quit
 '''
-#    screen.addstr(1,1, commands.getoutput('battery'))
-    cpu_usage = psutil.cpu_percent(interval=None, percpu=True)
-    screen.addstr(3,1, '%.2f' % cpu_usage[0])
-    screen.addstr(3,8, '%.2f' % cpu_usage[1])
-    screen.addstr(4,1, '%.2f' % cpu_usage[2])
-    screen.addstr(4,8, '%.2f' % cpu_usage[3])
-    screen.addstr(5,1, '%.2f' % cpu_usage[4])
-    screen.addstr(5,8, '%.2f' % cpu_usage[5])
-    screen.addstr(6,1, '%.2f' % cpu_usage[6])
-    screen.addstr(6,8, '%.2f' % cpu_usage[7])
 
     mem_stats = psutil.virtual_memory()
     
@@ -132,12 +138,6 @@ def run_cycle ( screen ):
 
     #screen.addstr(10, 1, commands.getoutput('sensors'))
     screen.addstr(12, 1, commands.getoutput('cat /proc/cpuinfo | grep "cpu MHz" --color=never'))
-
-    cpu_freq = []
-    with open('/proc/cpuinfo', 'r') as f:
-        for line in f:
-            if 'cpu MHz' in line:
-                cpu_freq.append(re.findall("\d+\.\d+", line)[0])
 
     screen.addstr(20, 0, cpu_freq[0])
 '''
