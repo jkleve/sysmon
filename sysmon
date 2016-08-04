@@ -63,6 +63,24 @@ def display_battery ( screen, b ):
     screen.addstr(8, 3, 'State:')
     screen.addstr(8, 18, '%s' % state)
 
+def get_cpu ():
+    
+    cpu = {}
+    cpu['num_procs'] = psutil.cpu_count()
+    cpu['usage'] = psutil.cpu_percent(interval=None, percpu=True)
+
+    return cpu
+
+def display_cpu ( screen, cpu ):
+
+    procs = cpu['num_procs']
+    usage = cpu['usage']
+
+    screen.addstr(10, 2, 'CPU')
+
+    for i in range(procs):
+        screen.addstr(11+i, 3, 'cpu[%d]: %4.1f' % (i, usage[i]))
+
 def run_cycle ( screen ):
 
 #    num_cores = psutil.cpu_count()
@@ -75,6 +93,8 @@ def run_cycle ( screen ):
     display_battery(screen, battery)
 
     # cpu usage TODO
+    cpu = get_cpu()
+    display_cpu(screen, cpu)
 
     # memory usage TODO
 
