@@ -1,0 +1,166 @@
+#!/usr/bin/env python
+import commands
+import curses
+import os
+import psutil
+import re
+import time
+
+class Importance:
+  NONE = 0
+  MID = 1
+  HIGH = 2
+
+def get_battery ():
+
+    info = commands.getoutput('upower -i /org/freedesktop/UPower/devices/battery_BAT0')
+    battery_info = {}
+
+    for line in info.split('\n'):
+        if 'percentage:' in line:
+            battery_info['percent'] = re.findall('\d+', line)[0]
+        if 'energy-rate:' in line:
+            battery_info['energy_rate'] = re.findall('\d+.\d+', line)[0]
+        if 'voltage:' in line:
+            battery_info['voltage'] = re.findall('\d+.\d+', line)[0]
+        if 'time to empty:' in line:
+            battery_info['empty_time'] = re.findall('\d+[\.]?\d*[a-zA-Z ]*', line)[0]
+        if 'state:' in line:
+            battery_info['state'] = re.sub('[ ]+', ' ', line.strip()).split(' ')[1]
+    return battery_info
+
+def display_battery ( screen, b ):
+
+    screen.addstr(3, 2, 'Battery')
+
+    # percentage
+    percent = int(b['percent'])
+    percent_c = curses.color_pair(1)
+    if percent < 25:
+        percent_c = curses.color_pair(3)
+    elif percent < 40:
+        percent_c = curses.color_pair(2)
+    screen.addstr(4, 3, 'Percentage:')
+    screen.addstr(4, 18, '%2d%%' % percent, percent_c)
+
+    # time to empty TODO add coloring when low?? unless we just want it for percent
+    empty_time = b['empty_time']
+    screen.addstr(5, 3, 'Time to empty:')
+    screen.addstr(5, 18, '%s' % empty_time)
+
+    # energy rate
+    rate = float(b['energy_rate'])
+    screen.addstr(6, 3, 'Energy rate:')
+    screen.addstr(6, 18, '%5.2f W' % rate)
+
+    # voltage
+    v = float(b['voltage'])
+    screen.addstr(7, 3, 'Voltage:')
+    screen.addstr(7, 18, '%5.2f V' % v)
+
+    # state
+    state = b['state']
+    screen.addstr(8, 3, 'State:')
+    screen.addstr(8, 18, '%s' % state)
+
+def run_cycle ( screen ):
+
+#    num_cores = psutil.cpu_count()
+    quit = False
+    screen.clear()
+    display_title(screen)
+
+    # battery
+    battery = get_battery()
+    display_battery(screen, battery)
+
+    # cpu usage TODO
+
+    # memory usage TODO
+
+    # temperatures TODO
+
+    screen.refresh()
+
+    key = screen.getch()
+    while key != -1:
+        if key == ord('q'):
+            quit = True
+        key = screen.getch()
+
+    return quit
+'''
+#    screen.addstr(1,1, commands.getoutput('battery'))
+    cpu_usage = psutil.cpu_percent(interval=None, percpu=True)
+    screen.addstr(3,1, '%.2f' % cpu_usage[0])
+    screen.addstr(3,8, '%.2f' % cpu_usage[1])
+    screen.addstr(4,1, '%.2f' % cpu_usage[2])
+    screen.addstr(4,8, '%.2f' % cpu_usage[3])
+    screen.addstr(5,1, '%.2f' % cpu_usage[4])
+    screen.addstr(5,8, '%.2f' % cpu_usage[5])
+    screen.addstr(6,1, '%.2f' % cpu_usage[6])
+    screen.addstr(6,8, '%.2f' % cpu_usage[7])
+
+    mem_stats = psutil.virtual_memory()
+    
+    mem_percent = { 'val': mem_stats.percent }
+    if mem_percent > 60.0: mem_percent['color'] = 2
+    else: mem_percent['color'] = 1
+
+    screen.addstr(8, 1, 'Memory: %5.2f%%' % (mem_percent['val']), curses.color_pair(mem_percent['color']))
+    screen.addstr(13, 1, ' used(%dMB) available(%dMB) free(%dMB)' % (mem_stats.used/1024/1024, mem_stats.available/1024/1024, mem_stats.free/1024/1024))
+
+    #screen.addstr(10, 1, commands.getoutput('sensors'))
+    screen.addstr(12, 1, commands.getoutput('cat /proc/cpuinfo | grep "cpu MHz" --color=never'))
+
+    cpu_freq = []
+    with open('/proc/cpuinfo', 'r') as f:
+        for line in f:
+            if 'cpu MHz' in line:
+                cpu_freq.append(re.findall("\d+\.\d+", line)[0])
+
+    screen.addstr(20, 0, cpu_freq[0])
+'''
+
+def display_title ( screen ):
+    screen.addstr(1, 1, 'System Monitor')
+
+def run_loop ( screen ):
+
+    while True:
+        quit = run_cycle(screen)
+        if quit == True:
+            break
+        else:
+          time.sleep(1)
+
+    deinit_curses()
+
+def init_colors ():
+    curses.start_color()
+    curses.use_default_colors()
+    curses.init_pair(1, curses.COLOR_WHITE, -1)
+    curses.init_pair(2, curses.COLOR_YELLOW, -1)
+    curses.init_pair(3, curses.COLOR_RED, -1)
+   
+def init_curses ():
+    stdscr = curses.initscr()
+    curses.curs_set(0)
+    curses.noecho()
+    curses.cbreak()
+    stdscr.keypad(1)
+    stdscr.nodelay(1)
+    init_colors()
+    return stdscr
+
+def deinit_curses ():
+    curses.nocbreak()
+    curses.echo()
+    curses.endwin()
+
+def main ():
+    screen = init_curses()
+    run_loop(screen)
+
+if __name__ == '__main__':
+    main()
