@@ -49,7 +49,8 @@ def display_battery ( screen, b ):
     screen.addstr(4, 18, '%2d%%' % percent, percent_c)
 
     # time to empty TODO add coloring when low?? unless we just want it for percent
-    if state is 'discharging':
+    # TODO add (<time laptop is expected to die>)
+    if state == 'discharging':
         time_to_str = 'Time to empty:'
     else:
         time_to_str = 'Time to full:'
