@@ -23,8 +23,8 @@ def get_battery ():
             battery_info['energy_rate'] = re.findall('\d+.\d+', line)[0]
         if 'voltage:' in line:
             battery_info['voltage'] = re.findall('\d+.\d+', line)[0]
-        if 'time to empty:' in line:
-            battery_info['empty_time'] = re.findall('\d+[\.]?\d*[a-zA-Z ]*', line)[0]
+        if 'time to ' in line:
+            battery_info['time_to'] = re.findall('\d+[\.]?\d*[a-zA-Z ]*', line)[0]
         if 'state:' in line:
             battery_info['state'] = re.sub('[ ]+', ' ', line.strip()).split(' ')[1]
     return battery_info
@@ -33,8 +33,13 @@ def display_battery ( screen, b ):
 
     screen.addstr(3, 2, 'Battery')
 
+    percent    = int(b['percent'])
+    empty_time = b['time_to']
+    rate       = float(b['energy_rate'])
+    v          = float(b['voltage'])
+    state      = b['state']
+
     # percentage
-    percent = int(b['percent'])
     percent_c = curses.color_pair(1)
     if percent < 25:
         percent_c = curses.color_pair(3)
@@ -44,22 +49,22 @@ def display_battery ( screen, b ):
     screen.addstr(4, 18, '%2d%%' % percent, percent_c)
 
     # time to empty TODO add coloring when low?? unless we just want it for percent
-    empty_time = b['empty_time']
-    screen.addstr(5, 3, 'Time to empty:')
+    if state is 'discharging':
+        time_to_str = 'Time to empty:'
+    else:
+        time_to_str = 'Time to full:'
+    screen.addstr(5, 3, time_to_str)
     screen.addstr(5, 18, '%s' % empty_time)
 
     # energy rate
-    rate = float(b['energy_rate'])
     screen.addstr(6, 3, 'Energy rate:')
     screen.addstr(6, 18, '%5.2f W' % rate)
 
     # voltage
-    v = float(b['voltage'])
     screen.addstr(7, 3, 'Voltage:')
     screen.addstr(7, 18, '%5.2f V' % v)
 
     # state
-    state = b['state']
     screen.addstr(8, 3, 'State:')
     screen.addstr(8, 18, '%s' % state)
 
@@ -97,6 +102,21 @@ def get_memory ():
 
     return memory
 
+def get_temps ():
+
+    temps = {}
+    for i in range(2, 6): # TODO can I use something besides these numbers ?
+        with open('/sys/bus/platform/devices/coretemp.0/hwmon/hwmon2/temp'+str(i)+'_input') as temp:
+             temps[i-2] = int(temp.readline())
+
+    return temps
+
+def display_temps ( screen, temps ):
+    i = 0
+    for k in temps:
+        screen.addstr(20+i, 3, 'Core %d: %d C' % (i, temps[k]/1000)) # TODO add degree sign
+        i += 1
+
 def run_cycle ( screen ):
 
 #    num_cores = psutil.cpu_count()
@@ -115,6 +135,8 @@ def run_cycle ( screen ):
     # memory usage TODO
 
     # temperatures TODO
+    temps = get_temps()
+    display_temps(screen, temps)
 
     screen.refresh()
 
@@ -125,6 +147,7 @@ def run_cycle ( screen ):
         key = screen.getch()
 
     return quit
+
 '''
 
     mem_stats = psutil.virtual_memory()
@@ -136,7 +159,6 @@ def run_cycle ( screen ):
     screen.addstr(8, 1, 'Memory: %5.2f%%' % (mem_percent['val']), curses.color_pair(mem_percent['color']))
     screen.addstr(13, 1, ' used(%dMB) available(%dMB) free(%dMB)' % (mem_stats.used/1024/1024, mem_stats.available/1024/1024, mem_stats.free/1024/1024))
 
-    #screen.addstr(10, 1, commands.getoutput('sensors'))
     screen.addstr(12, 1, commands.getoutput('cat /proc/cpuinfo | grep "cpu MHz" --color=never'))
 
     screen.addstr(20, 0, cpu_freq[0])
