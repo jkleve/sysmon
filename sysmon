@@ -23,7 +23,7 @@ def get_battery ():
             battery_info['energy_rate'] = re.findall('\d+.\d+', line)[0]
         if 'voltage:' in line:
             battery_info['voltage'] = re.findall('\d+.\d+', line)[0]
-        if 'time to ' in line:
+        if 'time to ' in line: # TODO bug: 'time to' not in file when fully charged
             battery_info['time_to'] = re.findall('\d+[\.]?\d*[a-zA-Z ]*', line)[0]
         if 'state:' in line:
             battery_info['state'] = re.sub('[ ]+', ' ', line.strip()).split(' ')[1]
